@@ -2,9 +2,8 @@ name: Atualizar Stats do README
 
 on:
   schedule:
-    # Roda toda segunda-feira às 00:00 UTC
     - cron: '0 0 * * 1'
-  workflow_dispatch: # Permite rodar manualmente
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -41,14 +40,28 @@ jobs:
 
           token = os.environ['GH_TOKEN']
           username = os.environ['GH_USERNAME']
-          headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json'}
+          headers = {
+            'Authorization': f'Bearer {token}',
+            'Accept': 'application/vnd.github+json',
+            'X-GitHub-Api-Version': '2022-11-28'
+          }
 
-          # --- Repositórios públicos + privados ---
+          # --- Dados do usuário ---
           resp_user = requests.get('https://api.github.com/user', headers=headers)
+          print(f'Status /user: {resp_user.status_code}')
           user_data = resp_user.json()
+
+          if 'created_at' not in user_data:
+            print(f'Erro ao buscar usuário: {user_data}')
+            exit(1)
+
           total_repos = user_data.get('public_repos', 0) + user_data.get('total_private_repos', 0)
 
-          # --- Contribuições no ano atual via API GraphQL ---
+          # --- Anos no GitHub ---
+          criado_em = datetime.strptime(user_data['created_at'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+          anos = (datetime.now(timezone.utc) - criado_em).days // 365
+
+          # --- Contribuições via GraphQL ---
           ano_atual = datetime.now(timezone.utc).year
           query = """
           query($login: String!) {
@@ -61,93 +74,70 @@ jobs:
             }
           }
           """
-          gql = requests.post(
+          gql_headers = {
+            'Authorization': f'bearer {token}',
+            'Content-Type': 'application/json'
+          }
+          gql_resp = requests.post(
             'https://api.github.com/graphql',
             json={'query': query, 'variables': {'login': username}},
-            headers=headers
+            headers=gql_headers
           )
-          contribuicoes = gql.json()['data']['user']['contributionsCollection']['contributionCalendar']['totalContributions']
+          print(f'Status GraphQL: {gql_resp.status_code}')
+          gql_data = gql_resp.json()
 
-          # --- Deploys ativos (repositórios com homepage/website ou ambiente de produção) ---
+          if 'errors' in gql_data or 'data' not in gql_data:
+            print(f'Erro GraphQL: {gql_data}')
+            exit(1)
+
+          contribuicoes = gql_data['data']['user']['contributionsCollection']['contributionCalendar']['totalContributions']
+
+          # --- Deploys: repos com homepage preenchida ---
           page = 1
-          deploys = 0
           repos_com_deploy = set()
           while True:
             resp_repos = requests.get(
-              f'https://api.github.com/user/repos?per_page=100&page={page}',
+              f'https://api.github.com/user/repos?per_page=100&page={page}&affiliation=owner',
               headers=headers
             )
             repos = resp_repos.json()
-            # Garante que a resposta é uma lista válida
             if not isinstance(repos, list) or not repos:
               break
             for repo in repos:
-              # Verifica se é um dicionário válido
               if not isinstance(repo, dict):
                 continue
-              full_name = repo.get('full_name', '')
-              # Conta repos com homepage (deploy público)
-              if repo.get('homepage') and repo['homepage'].strip():
-                repos_com_deploy.add(full_name)
-                continue
-              # Tenta buscar ambientes de produção
-              try:
-                resp_envs = requests.get(
-                  f'https://api.github.com/repos/{full_name}/environments',
-                  headers=headers
-                )
-                if resp_envs.status_code == 200:
-                  envs_data = resp_envs.json()
-                  if isinstance(envs_data, dict):
-                    for env in envs_data.get('environments', []):
-                      if isinstance(env, dict) and env.get('name', '').lower() in ['production', 'preview']:
-                        repos_com_deploy.add(full_name)
-                        break
-              except Exception:
-                pass
+              homepage = repo.get('homepage') or ''
+              if homepage.strip():
+                repos_com_deploy.add(repo.get('full_name', ''))
             page += 1
 
           deploys = len(repos_com_deploy)
-
-          # --- Anos no GitHub ---
-          criado_em = datetime.strptime(user_data['created_at'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
-          anos = (datetime.now(timezone.utc) - criado_em).days // 365
 
           print(f'Repositórios: {total_repos}')
           print(f'Contribuições {ano_atual}: {contribuicoes}')
           print(f'Live Deploys: {deploys}')
           print(f'Anos no GitHub: {anos}')
+          print(f'Repos com deploy: {repos_com_deploy}')
 
           # --- Atualizar README.md ---
           with open('README.md', 'r', encoding='utf-8') as f:
             readme = f.read()
 
-          # Atualiza badge de Repositories
           readme = re.sub(
             r'(img\.shields\.io/badge/Repositories-)\d+(-)',
-            rf'\g<1>{total_repos}\2',
-            readme
+            rf'\g<1>{total_repos}\2', readme
           )
-
-          # Atualiza badge de Contributions (ano + número)
           readme = re.sub(
             r'(img\.shields\.io/badge/Contributions%20)\d+(-)(\d+)(%2B)',
-            rf'\g<1>{ano_atual}\2{contribuicoes}\4',
-            readme
+            rf'\g<1>{ano_atual}\2{contribuicoes}\4', readme
           )
-
-          # Atualiza badge de Live Deploys
           readme = re.sub(
             r'(img\.shields\.io/badge/Live%20Deploys-)\d+(-)',
-            rf'\g<1>{deploys}\2',
-            readme
+            rf'\g<1>{deploys}\2', readme
           )
-
-          # Atualiza badge de Years on GitHub
           readme = re.sub(
             r'(img\.shields\.io/badge/Years%20on%20GitHub-)\d+(-)',
-            rf'\g<1>{anos}\2',
-            readme
+            rf'\g<1>{anos}\2', readme
           )
 
           with open('README.md', 'w', encoding='utf-8') as f:
@@ -162,9 +152,9 @@ jobs:
           git config --local user.name "github-actions[bot]"
           git add README.md
           if git diff --staged --quiet; then
-            echo "Nenhuma mudança encontrada. Stats já estão atualizadas."
+            echo "Nenhuma mudança. Stats já atualizadas."
           else
             git commit -m "chore: atualiza stats do README [skip ci]"
             git push
-            echo "README atualizado com sucesso!"
+            echo "README atualizado!"
           fi
