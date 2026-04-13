@@ -123,11 +123,11 @@ I study **Computer Engineering** and build real products — from mobile apps to
 ## Stats
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Repositories-20-0d1117?style=for-the-badge&logo=github&logoColor=58a6ff&labelColor=161b22" />
+  <img src="https://img.shields.io/badge/Repositories-11-0d1117?style=for-the-badge&logo=github&logoColor=58a6ff&labelColor=161b22" />
   &nbsp;
-  <img src="https://img.shields.io/badge/Contributions%202026-438%2B-0d1117?style=for-the-badge&logo=github&logoColor=4ac26b&labelColor=161b22" />
+  <img src="https://img.shields.io/badge/Contributions%202026®8%2B-0d1117?style=for-the-badge&logo=github&logoColor=4ac26b&labelColor=161b22" />
   &nbsp;
-  <img src="https://img.shields.io/badge/Live%20Deploys-3-0d1117?style=for-the-badge&logo=vercel&logoColor=00c7b7&labelColor=161b22" />
+  <img src="https://img.shields.io/badge/Live%20Deploys-0-0d1117?style=for-the-badge&logo=vercel&logoColor=00c7b7&labelColor=161b22" />
   &nbsp;
   <img src="https://img.shields.io/badge/Years%20on%20GitHub-4-0d1117?style=for-the-badge&logo=github&logoColor=8b949e&labelColor=161b22" />
 </p>
