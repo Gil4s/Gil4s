@@ -85,7 +85,7 @@ I study **Computer Engineering** and build real products — from mobile apps to
       <p>
         <img src="https://img.shields.io/badge/React_Native-20232a?style=flat-square&logo=react&logoColor=61dafb" />
         <img src="https://img.shields.io/badge/TypeScript-3178c6?style=flat-square&logo=typescript&logoColor=white" />
-        <img src="https://img.shields.io/badge/Testing-f0ad4e?style=flat-square&logoColor=white" />
+        <img src="https://img.shields.io/badge/In%20Progress-f0ad4e?style=flat-square&logoColor=white" />
       </p>
     </td>
     <td width="50%" valign="top">
@@ -117,32 +117,6 @@ I study **Computer Engineering** and build real products — from mobile apps to
     </td>
   </tr>
 </table>
-
----
-
-## Stats
-
-<p align="center">
-  <img src="https://img.shields.io/badge/Repositories-11-0d1117?style=for-the-badge&logo=github&logoColor=58a6ff&labelColor=161b22" />
-  &nbsp;
-  <img src="https://img.shields.io/badge/Contributions%202026®8%2B-0d1117?style=for-the-badge&logo=github&logoColor=4ac26b&labelColor=161b22" />
-  &nbsp;
-  <img src="https://img.shields.io/badge/Live%20Deploys-0-0d1117?style=for-the-badge&logo=vercel&logoColor=00c7b7&labelColor=161b22" />
-  &nbsp;
-  <img src="https://img.shields.io/badge/Years%20on%20GitHub-4-0d1117?style=for-the-badge&logo=github&logoColor=8b949e&labelColor=161b22" />
-</p>
-
-<p align="center">
-  <img src="https://img.shields.io/badge/TypeScript-primary-3178c6?style=flat-square&logo=typescript&logoColor=white" />
-  &nbsp;
-  <img src="https://img.shields.io/badge/React%20Native-mobile-20232a?style=flat-square&logo=react&logoColor=61dafb" />
-  &nbsp;
-  <img src="https://img.shields.io/badge/Next.js-web-000?style=flat-square&logo=nextdotjs&logoColor=white" />
-  &nbsp;
-  <img src="https://img.shields.io/badge/Python-scripts-3776ab?style=flat-square&logo=python&logoColor=white" />
-  &nbsp;
-  <img src="https://img.shields.io/badge/Java-learning-f89820?style=flat-square&logo=java&logoColor=white" />
-</p>
 
 ---
 
