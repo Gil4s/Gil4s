@@ -1,0 +1,152 @@
+name: Atualizar Stats do README
+
+on:
+  schedule:
+    # Roda toda segunda-feira às 00:00 UTC
+    - cron: '0 0 * * 1'
+  workflow_dispatch: # Permite rodar manualmente
+
+permissions:
+  contents: write
+
+jobs:
+  atualizar:
+    runs-on: ubuntu-latest
+    name: Atualiza badges de stats no README
+
+    steps:
+      - name: Checkout do repositório
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Configurar Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Instalar dependências
+        run: pip install requests
+
+      - name: Buscar stats e atualizar README
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_USERNAME: Gil4s
+        run: |
+          python3 << 'EOF'
+          import requests
+          import re
+          import os
+
+          token = os.environ['GH_TOKEN']
+          username = os.environ['GH_USERNAME']
+          headers = {'Authorization': f'Bearer {token}', 'Accept': 'application/vnd.github+json'}
+
+          # --- Repositórios públicos + privados ---
+          resp_user = requests.get(f'https://api.github.com/user', headers=headers)
+          user_data = resp_user.json()
+          total_repos = user_data.get('public_repos', 0) + user_data.get('total_private_repos', 0)
+
+          # --- Contribuições no ano atual via API GraphQL ---
+          import datetime
+          ano_atual = datetime.datetime.now().year
+          query = """
+          query($login: String!) {
+            user(login: $login) {
+              contributionsCollection {
+                contributionCalendar {
+                  totalContributions
+                }
+              }
+            }
+          }
+          """
+          gql = requests.post(
+            'https://api.github.com/graphql',
+            json={'query': query, 'variables': {'login': username}},
+            headers=headers
+          )
+          contribuicoes = gql.json()['data']['user']['contributionsCollection']['contributionCalendar']['totalContributions']
+
+          # --- Deploys ativos (repositórios com ambiente de produção) ---
+          page = 1
+          deploys = 0
+          while True:
+            resp_repos = requests.get(
+              f'https://api.github.com/user/repos?per_page=100&page={page}',
+              headers=headers
+            )
+            repos = resp_repos.json()
+            if not repos:
+              break
+            for repo in repos:
+              envs = requests.get(
+                f"https://api.github.com/repos/{repo['full_name']}/environments",
+                headers=headers
+              ).json()
+              for env in envs.get('environments', []):
+                if env.get('name', '').lower() in ['production', 'preview']:
+                  deploys += 1
+                  break
+            page += 1
+
+          # --- Anos no GitHub ---
+          from datetime import datetime, timezone
+          criado_em = datetime.strptime(user_data['created_at'], '%Y-%m-%dT%H:%M:%SZ').replace(tzinfo=timezone.utc)
+          anos = (datetime.now(timezone.utc) - criado_em).days // 365
+
+          print(f'Repositórios: {total_repos}')
+          print(f'Contribuições {ano_atual}: {contribuicoes}')
+          print(f'Live Deploys: {deploys}')
+          print(f'Anos no GitHub: {anos}')
+
+          # --- Atualizar README.md ---
+          with open('README.md', 'r', encoding='utf-8') as f:
+            readme = f.read()
+
+          # Atualiza badge de Repositories
+          readme = re.sub(
+            r'(img\.shields\.io/badge/Repositories-)\d+(-)',
+            rf'\g<1>{total_repos}\2',
+            readme
+          )
+
+          # Atualiza badge de Contributions (ano + número)
+          readme = re.sub(
+            r'(img\.shields\.io/badge/Contributions%20)\d+(-)(\d+)(%2B)',
+            rf'\g<1>{ano_atual}\2{contribuicoes}\4',
+            readme
+          )
+
+          # Atualiza badge de Live Deploys
+          readme = re.sub(
+            r'(img\.shields\.io/badge/Live%20Deploys-)\d+(-)',
+            rf'\g<1>{deploys}\2',
+            readme
+          )
+
+          # Atualiza badge de Years on GitHub
+          readme = re.sub(
+            r'(img\.shields\.io/badge/Years%20on%20GitHub-)\d+(-)',
+            rf'\g<1>{anos}\2',
+            readme
+          )
+
+          with open('README.md', 'w', encoding='utf-8') as f:
+            f.write(readme)
+
+          print('README.md atualizado com sucesso!')
+          EOF
+
+      - name: Fazer commit se houve mudanças
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add README.md
+          if git diff --staged --quiet; then
+            echo "Nenhuma mudança encontrada. Stats já estão atualizadas."
+          else
+            git commit -m "chore: atualiza stats do README [skip ci]"
+            git push
+            echo "README atualizado com sucesso!"
+          fi
